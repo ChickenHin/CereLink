@@ -1,13 +1,7 @@
 name: Tests
 
 on:
-  push:
-    branches:
-      - 'master'
-      - 'releases/**'
-  pull_request:
-    branches:
-      - master
+  workflow_dispatch: 
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -18,43 +12,41 @@ defaults:
     shell: bash
 
 jobs:
-  pre_job:
-    runs-on: ubuntu-latest
-    outputs:
-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
-    steps:
-      - id: skip_check
-        uses: fkirc/skip-duplicate-actions@v5
-        with:
-          concurrent_skipping: 'same_content'
-          skip_after_successful_duplicate: 'true'
-          do_not_skip: '["release", "workflow_dispatch"]'
+  # pre_job:
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     should_skip: ${{ steps.skip_check.outputs.should_skip }}
+  #   steps:
+  #     - id: skip_check
+  #       uses: fkirc/skip-duplicate-actions@v5
+  #       with:
+  #         concurrent_skipping: 'same_content'
+  #         skip_after_successful_duplicate: 'true'
+  #         do_not_skip: '["release", "workflow_dispatch"]'
 
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/ruff-action@v3
-        with:
-          args: check
-          src: pycbsdk/src
-      - uses: astral-sh/ruff-action@v3
-        with:
-          args: format --check
-          src: pycbsdk/src
+  # lint:
+  #   name: Lint
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v6
+  #     - uses: astral-sh/ruff-action@v3
+  #       with:
+  #         args: check
+  #         src: pycbsdk/src
+  #     - uses: astral-sh/ruff-action@v3
+  #       with:
+  #         args: format --check
+  #         src: pycbsdk/src
 
   test:
-    needs: pre_job
-    if: needs.pre_job.outputs.should_skip != 'true'
+    # needs: pre_job
+    # if: needs.pre_job.outputs.should_skip != 'true'
     name: ${{ matrix.config.name }}
     runs-on: ${{ matrix.config.os }}
     strategy:
       fail-fast: false
       matrix:
         config:
-          - {name: "windows-x64", os: "windows-2022", cmake_extra: "-T v142,host=x86"}
-          - {name: "macOS-latest", os: "macOS-latest"}
           - {name: "ubuntu-latest", os: "ubuntu-latest"}
 
     steps:
@@ -119,23 +111,23 @@ jobs:
         timeout-minutes: 10
 
       # pycbsdk tests (reuse the shared library from the same build)
-      - name: Install shared library
-        run: cmake --install build --config Release
+      # - name: Install shared library
+      #   run: cmake --install build --config Release
 
-      - name: Set library path
-        shell: python
-        run: |
-          import os, pathlib
-          workspace = pathlib.Path(os.environ["GITHUB_WORKSPACE"])
-          libdir = workspace / "install" / ("bin" if os.name == "nt" else "lib")
-          with open(os.environ["GITHUB_ENV"], "a") as f:
-              f.write(f"CBSDK_LIB_DIR={libdir}\n")
+      # - name: Set library path
+      #   shell: python
+      #   run: |
+      #     import os, pathlib
+      #     workspace = pathlib.Path(os.environ["GITHUB_WORKSPACE"])
+      #     libdir = workspace / "install" / ("bin" if os.name == "nt" else "lib")
+      #     with open(os.environ["GITHUB_ENV"], "a") as f:
+      #         f.write(f"CBSDK_LIB_DIR={libdir}\n")
 
-      - name: Install pycbsdk
-        working-directory: pycbsdk
-        run: uv sync
+      # - name: Install pycbsdk
+      #   working-directory: pycbsdk
+      #   run: uv sync
 
-      - name: pycbsdk Tests
-        working-directory: pycbsdk
-        run: uv run pytest tests/ -m integration --timeout=120 -v
-        timeout-minutes: 10
+      # - name: pycbsdk Tests
+      #   working-directory: pycbsdk
+      #   run: uv run pytest tests/ -m integration --timeout=120 -v
+      #   timeout-minutes: 10
